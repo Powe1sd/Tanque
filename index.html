@@ -98,11 +98,14 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:flex-
 .touch-fire{width:78px;height:78px;border-radius:50%;border:2px solid var(--accent2);background:radial-gradient(circle at 35% 30%,#a8c45a,#3a5028);color:#0e140a;font:800 13px Orbitron,sans-serif;letter-spacing:1px;touch-action:none;box-shadow:0 0 18px #a8c45a44}
 .touch-fire:active,.touch-fire.pressed{transform:scale(.94);box-shadow:0 0 24px #a8c45a88}
 
-@media(max-width:900px),(pointer:coarse){
-  #touchPad.show{display:block}
+@media(max-width:900px){
   .tank-grid{grid-template-columns:repeat(2,1fr)}
   .hud-block{font-size:10px}
   .hud-title{font-size:10px}
+}
+/* Touch pad solo en dispositivos táctiles reales */
+@media(pointer:coarse){
+  #touchPad.show{display:block}
 }
 @media(max-width:500px){
   .panel-card{padding:16px 12px}
@@ -310,9 +313,9 @@ const WORLDS = {
 };
 
 const DIFF = {
-  easy:  {spawn:1.0,  enemySpd:1.05, eDmg:16, lives:3, ammo:100, maxHp:100},
-  normal:{spawn:0.78, enemySpd:1.25, eDmg:22, lives:2, ammo:90,  maxHp:85},
-  hard:  {spawn:0.58, enemySpd:1.5,  eDmg:30, lives:1, ammo:75,  maxHp:75}
+  easy:  {spawn:1.15, enemySpd:0.95, eDmg:12, lives:4, ammo:120, maxHp:120},
+  normal:{spawn:0.95, enemySpd:1.1,  eDmg:16, lives:3, ammo:105, maxHp:105},
+  hard:  {spawn:0.75, enemySpd:1.25, eDmg:22, lives:2, ammo:90,  maxHp:90}
 };
 
 function resize(){
@@ -385,7 +388,12 @@ function doVibrate(ms){
 }
 
 function isTouchDevice(){
-  return window.matchMedia("(pointer:coarse)").matches || "ontouchstart" in window || window.innerWidth<900;
+  /* Solo táctil real: no se muestra por ancho de pantalla */
+  try{
+    if(window.matchMedia("(pointer:coarse)").matches) return true;
+    if(window.matchMedia("(hover:none) and (pointer:coarse)").matches) return true;
+  }catch(e){}
+  return false;
 }
 function showTouch(){ $("touchPad").classList.toggle("show", isTouchDevice()); }
 showTouch();
@@ -636,9 +644,9 @@ function applyDamage(amount){
   if(hp<=0){
     lives--;
     if(lives<=0){ endGame(); return; }
-    /* lose a life, restore partial HP */
-    hp=Math.floor(maxHp*0.55);
-    invisible=100;
+    hp=Math.floor(maxHp*0.7);
+    invisible=130;
+    shield=Math.max(shield,90);
     setMsg("UNIDAD DAÑADA · VIDA -1",70);
     updateHUD();
   }
@@ -667,14 +675,16 @@ function spawnEnemy(){
   if(wave>6) types.push("heavy","bomber");
   const type=types[Math.floor(Math.random()*types.length)];
   const s=(type==="bomber"?28:type==="heavy"?26:type==="drone"?16:22)*scale;
-  const hpE=(type==="heavy"?4:type==="bomber"?3:type==="kamikaze"?1:2)*(difficulty==="hard"?1.3:1);
+  const waveScale=1+Math.min(0.35, wave*0.025); /* sube despacio */
+  const hpE=(type==="heavy"?4:type==="bomber"?3:type==="kamikaze"?1:2)*(difficulty==="hard"?1.2:1)*waveScale;
+  const spdMul=d.enemySpd*(1+Math.min(0.25, wave*0.02));
   enemies.push({
     x:30+Math.random()*(W-60-s), y:-s-10,
     s, hp:hpE, maxHp:hpE, type, boss:false,
-    vx:(Math.random()-.5)*1.2*d.enemySpd*scale,
-    vy:(1.1+Math.random()*0.8)*d.enemySpd*scale,
+    vx:(Math.random()-.5)*1.1*spdMul*scale,
+    vy:(1.0+Math.random()*0.7)*spdMul*scale,
     baseY:40+Math.random()*H*0.28,
-    arriving:true, shootT:45+Math.random()*35,
+    arriving:true, shootT:55+Math.random()*45,
     zigzag:Math.random()*6, zigDir:Math.random()>.5?1:-1
   });
 }
@@ -684,7 +694,7 @@ function spawnBoss(){
   enemies.push({
     x:W/2-s/2, y:-s-20, s, hp:28, maxHp:28,
     type:"boss", boss:true, vx:0, vy:1.4*scale,
-    baseY:H*0.18, arriving:true, shootT:40,
+    baseY:H*0.18, arriving:true, shootT:50,
     zigzag:0, zigDir:1
   });
   setMsg("⚠ ALERTA · AVIÓN JEFE",110);
@@ -730,27 +740,30 @@ function update(dt){
   if(screenShake>0){ screenShake*=0.85; if(screenShake<0.3) screenShake=0; }
   if(damageFlash>0) damageFlash--;
 
-  /* Regeneración lenta: no te salva en combate intenso */
+  /* Regeneración moderada fuera de combate */
   regenTimer++;
-  if(regenTimer>220 && hp<maxHp && invisible<=0){
-    if(regenTimer%28===0){
-      hp=Math.min(maxHp, hp+1);
+  if(regenTimer>140 && hp<maxHp && invisible<=0){
+    if(regenTimer%18===0){
+      hp=Math.min(maxHp, hp+1.8);
       updateHPBar();
     }
   }
 
   phaseT++;
-  const spawnRate=(780-Math.min(wave*55,420))*d.spawn;
-  if(performance.now()-lastSpawn>spawnRate && enemies.length<(difficulty==="hard"?12:9)){
-    if(wave>0 && wave%5===0 && !enemies.some(e=>e.boss)){
+  /* Escalado moderado: sube despacio con las oleadas */
+  const waveFactor=Math.min(wave*28, 280);
+  const spawnRate=(920-waveFactor)*d.spawn;
+  const maxEnemies=difficulty==="hard"?9:(difficulty==="easy"?6:7);
+  if(performance.now()-lastSpawn>spawnRate && enemies.length<maxEnemies){
+    if(wave>0 && wave%6===0 && !enemies.some(e=>e.boss)){
       spawnBoss(); wave++;
     } else {
       spawnEnemy();
-      if(wave>4 && Math.random()<0.3) spawnEnemy();
+      if(wave>6 && Math.random()<0.22) spawnEnemy();
     }
     lastSpawn=performance.now();
   }
-  if(enemies.length===0 && phaseT>50){ wave++; phaseT=0; lastSpawn=0; }
+  if(enemies.length===0 && phaseT>70){ wave++; phaseT=0; lastSpawn=0; }
 
   /* Solo munición de emergencia si vas muy bajo */
   if(ammo<=12 && performance.now()-lastSupply>4500){
@@ -772,13 +785,13 @@ function update(dt){
       e.shootT--;
       if(e.shootT<=0){
         enemyShoot(e);
-        e.shootT=e.boss?32:(e.type==="heavy"?55:e.type==="bomber"?48:e.type==="kamikaze"?70:38)+Math.random()*22;
+        e.shootT=e.boss?42:(e.type==="heavy"?70:e.type==="bomber"?60:e.type==="kamikaze"?85:48)+Math.random()*28;
       }
     }
     const cx=e.x+e.s/2, cy=e.y+e.s/2;
     if(Math.hypot(player.x-cx,player.y-cy)<player.size*0.9+e.s*0.4){
       if(!e.boss) destroyEnemy(e);
-      applyDamage(d.eDmg*1.8);
+      applyDamage(d.eDmg*1.25);
       if(!running) return;
     }
   }
@@ -842,8 +855,8 @@ function update(dt){
 function enemyShoot(e){
   const cx=e.x+e.s/2, cy=e.y+e.s/2;
   const dx=player.x-cx, dy=player.y-cy, len=Math.hypot(dx,dy)||1;
-  const sp=(e.boss?3.6:2.8)*scale*DIFF[difficulty].enemySpd;
-  const count=e.boss?3:(e.type==="bomber"?2:1);
+  const sp=(e.boss?3.2:2.4)*scale*DIFF[difficulty].enemySpd;
+  const count=e.boss?2:(e.type==="bomber"?2:1);
   for(let k=0;k<count;k++){
     const spread=(k-(count-1)/2)*0.14;
     const ang=Math.atan2(dy,dx)+spread;
