@@ -310,9 +310,9 @@ const WORLDS = {
 };
 
 const DIFF = {
-  easy:  {spawn:1.4,  enemySpd:0.7,  eDmg:10, lives:4, ammo:140, maxHp:120},
-  normal:{spawn:1.1,  enemySpd:0.85, eDmg:15, lives:3, ammo:120, maxHp:100},
-  hard:  {spawn:0.85, enemySpd:1.05, eDmg:22, lives:2, ammo:100, maxHp:90}
+  easy:  {spawn:1.0,  enemySpd:1.05, eDmg:16, lives:3, ammo:100, maxHp:100},
+  normal:{spawn:0.78, enemySpd:1.25, eDmg:22, lives:2, ammo:90,  maxHp:85},
+  hard:  {spawn:0.58, enemySpd:1.5,  eDmg:30, lives:1, ammo:75,  maxHp:75}
 };
 
 function resize(){
@@ -513,7 +513,7 @@ function startGame(){
   const d=DIFF[difficulty];
   score=0; lives=d.lives; ammo=d.ammo; wave=0;
   maxHp=d.maxHp; hp=maxHp;
-  specialCharges=4; combo=0; comboTimer=0;
+  specialCharges=2; combo=0; comboTimer=0;
   shield=0; rapid=0; triple=0; pierce=0; invisible=0; missileP=0;
   enemies=[]; bullets=[]; eBullets=[]; pickups=[]; particles=[];
   phaseT=0; regenTimer=0; damageFlash=0;
@@ -597,18 +597,15 @@ function useSpecial(){
     enemies.filter(e=>!e.boss).sort((a,b)=>b.y-a.y).slice(0,5).forEach(e=>destroyEnemy(e));
     setMsg("ATAQUE AÉREO");
   } else if(pick==="shield"){
-    shield=Math.max(shield,360); setMsg("BLINDAJE REFORZADO");
+    shield=Math.max(shield,220); setMsg("BLINDAJE REFORZADO");
   } else if(pick==="rapid"){
-    rapid=480; triple=200; setMsg("SOBRECARGA DE CAÑÓN");
+    rapid=280; triple=120; setMsg("SOBRECARGA DE CAÑÓN");
   } else if(pick==="missiles"){
-    missileP=400;
-    for(let i=0;i<4;i++) setTimeout(()=>{ if(running) fireMissile(); },i*90);
+    missileP=240;
+    for(let i=0;i<3;i++) setTimeout(()=>{ if(running) fireMissile(); },i*90);
     setMsg("SALVA DE MISILES");
   } else {
-    /* repair: recover HP */
-    hp=Math.min(maxHp, hp+Math.floor(maxHp*0.35));
-    lives=Math.min(5,lives+1);
-    shield=Math.max(shield,120);
+    hp=Math.min(maxHp, hp+Math.floor(maxHp*0.25));
     setMsg("REPARACIÓN DE CAMPO");
   }
   doVibrate(25);
@@ -654,10 +651,10 @@ function destroyEnemy(e){
   const pts=e.boss?25:(e.type==="bomber"?8:e.type==="heavy"?6:4);
   score+=pts*(combo>1?Math.min(combo,5):1);
   combo++; comboTimer=90;
-  /* Más drops: munición frecuente + más escudos/poderes según oleada */
-  const dropChance=0.42+Math.min(0.25,wave*0.02);
+  /* Menos poderes: drops moderados, prioriza munición */
+  const dropChance=0.22+Math.min(0.08,wave*0.008);
   if(Math.random()<dropChance) spawnPickup(e.x+e.s/2,e.y+e.s/2);
-  if(e.boss){ spawnPickup(e.x+e.s/2-20,e.y); spawnPickup(e.x+e.s/2+20,e.y); }
+  if(e.boss && Math.random()<0.6) spawnPickup(e.x+e.s/2,e.y);
   burstParticles(e.x+e.s/2,e.y+e.s/2,e.boss?28:12,"255,180,40");
   if(e.boss) setMsg("JEFE ABATIDO +"+pts,80);
   updateHUD();
@@ -677,7 +674,7 @@ function spawnEnemy(){
     vx:(Math.random()-.5)*1.2*d.enemySpd*scale,
     vy:(1.1+Math.random()*0.8)*d.enemySpd*scale,
     baseY:40+Math.random()*H*0.28,
-    arriving:true, shootT:90+Math.random()*70,
+    arriving:true, shootT:45+Math.random()*35,
     zigzag:Math.random()*6, zigDir:Math.random()>.5?1:-1
   });
 }
@@ -687,20 +684,19 @@ function spawnBoss(){
   enemies.push({
     x:W/2-s/2, y:-s-20, s, hp:28, maxHp:28,
     type:"boss", boss:true, vx:0, vy:1.4*scale,
-    baseY:H*0.18, arriving:true, shootT:70,
+    baseY:H*0.18, arriving:true, shootT:40,
     zigzag:0, zigDir:1
   });
   setMsg("⚠ ALERTA · AVIÓN JEFE",110);
 }
 
 function spawnPickup(x,y,forceType){
-  /* Más munición y escudos; poderes aumentan con la oleada */
-  let types=["ammo","ammo","ammo","ammo","ammo","shield","shield","rapid","triple","pierce","repair","special"];
-  if(wave>=3) types.push("shield","missile","special","life");
-  if(wave>=6) types.push("shield","missile","rapid","special","repair");
-  if(wave>=10) types.push("shield","life","special","missile");
+  /* Pocos poderes: sobre todo munición; escudo/poder raros */
+  let types=["ammo","ammo","ammo","ammo","ammo","ammo","repair","rapid","shield"];
+  if(wave>=4) types.push("ammo","pierce","triple");
+  if(wave>=8) types.push("missile","special","life");
   const type=forceType||types[Math.floor(Math.random()*types.length)];
-  pickups.push({x,y,vy:1.15*scale,type,s:14*scale,life:480});
+  pickups.push({x,y,vy:1.35*scale,type,s:14*scale,life:360});
 }
 function spawnParticle(x,y,col,n){
   for(let i=0;i<n;i++){
@@ -734,18 +730,18 @@ function update(dt){
   if(screenShake>0){ screenShake*=0.85; if(screenShake<0.3) screenShake=0; }
   if(damageFlash>0) damageFlash--;
 
-  /* HP regeneration: after 2.5s without taking damage, heal slowly */
+  /* Regeneración lenta: no te salva en combate intenso */
   regenTimer++;
-  if(regenTimer>150 && hp<maxHp && invisible<=0){
-    if(regenTimer%20===0){
-      hp=Math.min(maxHp, hp+1.5);
+  if(regenTimer>220 && hp<maxHp && invisible<=0){
+    if(regenTimer%28===0){
+      hp=Math.min(maxHp, hp+1);
       updateHPBar();
     }
   }
 
   phaseT++;
-  const spawnRate=(1100-Math.min(wave*40,500))*d.spawn;
-  if(performance.now()-lastSpawn>spawnRate && enemies.length<(difficulty==="hard"?10:8)){
+  const spawnRate=(780-Math.min(wave*55,420))*d.spawn;
+  if(performance.now()-lastSpawn>spawnRate && enemies.length<(difficulty==="hard"?12:9)){
     if(wave>0 && wave%5===0 && !enemies.some(e=>e.boss)){
       spawnBoss(); wave++;
     } else {
@@ -754,12 +750,11 @@ function update(dt){
     }
     lastSpawn=performance.now();
   }
-  if(enemies.length===0 && phaseT>90){ wave++; phaseT=0; lastSpawn=0; }
+  if(enemies.length===0 && phaseT>50){ wave++; phaseT=0; lastSpawn=0; }
 
-  /* Suministros periódicos: munición y a veces escudo/poder */
-  if(performance.now()-lastSupply>(ammo<=20?2800:5200)){
-    spawnPickup(W*0.2+Math.random()*W*0.6, 30+Math.random()*40, ammo<=30?"ammo":null);
-    if(wave>=2 && Math.random()<0.4) spawnPickup(W*0.25+Math.random()*W*0.5, 50, Math.random()<0.5?"shield":"special");
+  /* Solo munición de emergencia si vas muy bajo */
+  if(ammo<=12 && performance.now()-lastSupply>4500){
+    spawnPickup(W*0.3+Math.random()*W*0.4, 35, "ammo");
     lastSupply=performance.now();
   }
 
@@ -777,8 +772,7 @@ function update(dt){
       e.shootT--;
       if(e.shootT<=0){
         enemyShoot(e);
-        /* Menos cadencia: enemigos disparan más despacio */
-        e.shootT=e.boss?55:(e.type==="heavy"?95:e.type==="bomber"?85:e.type==="kamikaze"?120:70)+Math.random()*40;
+        e.shootT=e.boss?32:(e.type==="heavy"?55:e.type==="bomber"?48:e.type==="kamikaze"?70:38)+Math.random()*22;
       }
     }
     const cx=e.x+e.s/2, cy=e.y+e.s/2;
@@ -848,9 +842,8 @@ function update(dt){
 function enemyShoot(e){
   const cx=e.x+e.s/2, cy=e.y+e.s/2;
   const dx=player.x-cx, dy=player.y-cy, len=Math.hypot(dx,dy)||1;
-  /* Balas enemigas más lentas y menos proyectiles */
-  const sp=(e.boss?2.8:2.1)*scale*DIFF[difficulty].enemySpd;
-  const count=e.boss?2:(e.type==="bomber"?2:1);
+  const sp=(e.boss?3.6:2.8)*scale*DIFF[difficulty].enemySpd;
+  const count=e.boss?3:(e.type==="bomber"?2:1);
   for(let k=0;k<count;k++){
     const spread=(k-(count-1)/2)*0.14;
     const ang=Math.atan2(dy,dx)+spread;
@@ -859,15 +852,15 @@ function enemyShoot(e){
 }
 
 function applyPickup(type){
-  if(type==="ammo"){ ammo=Math.min(ammo+55,180); setMsg("+55 MUNICIÓN"); }
-  else if(type==="shield"){ shield=Math.max(shield,380); setMsg("BLINDAJE"); }
-  else if(type==="rapid"){ rapid=400; setMsg("RÁFAGA"); }
-  else if(type==="triple"){ triple=300; setMsg("TRIPLE DISPARO"); }
-  else if(type==="pierce"){ pierce=320; setMsg("PERFORANTE"); }
-  else if(type==="life"){ lives=Math.min(lives+1,5); setMsg("+1 VIDA"); }
-  else if(type==="missile"){ missileP=380; setMsg("MISILES"); }
-  else if(type==="special"){ specialCharges=Math.min(specialCharges+1,7); setMsg("+1 PODER"); }
-  else if(type==="repair"){ hp=Math.min(maxHp,hp+Math.floor(maxHp*0.45)); setMsg("REPARACIÓN +HP"); }
+  if(type==="ammo"){ ammo=Math.min(ammo+35,140); setMsg("+35 MUNICIÓN"); }
+  else if(type==="shield"){ shield=Math.max(shield,200); setMsg("BLINDAJE"); }
+  else if(type==="rapid"){ rapid=240; setMsg("RÁFAGA"); }
+  else if(type==="triple"){ triple=180; setMsg("TRIPLE DISPARO"); }
+  else if(type==="pierce"){ pierce=200; setMsg("PERFORANTE"); }
+  else if(type==="life"){ lives=Math.min(lives+1,4); setMsg("+1 VIDA"); }
+  else if(type==="missile"){ missileP=220; setMsg("MISILES"); }
+  else if(type==="special"){ specialCharges=Math.min(specialCharges+1,4); setMsg("+1 PODER"); }
+  else if(type==="repair"){ hp=Math.min(maxHp,hp+Math.floor(maxHp*0.28)); setMsg("REPARACIÓN +HP"); }
   updateHUD();
 }
 
