@@ -88,30 +88,15 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:flex-
 .toggle::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#c8d8a0;top:2px;left:2px;transition:.15s}
 .toggle.on::after{left:22px;background:var(--accent2)}
 
-#touchPad{display:none;padding:8px 10px 12px;background:#0c120c;border-top:1px solid #2a3a22}
-#touchPad.show{display:block}
-.touch-inner{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:1100px;margin:0 auto}
-.touch-stick{width:120px;height:110px;border-radius:12px;background:linear-gradient(145deg,#1e2c1a,#121a10);border:2px solid #4a6238;touch-action:none;position:relative;display:flex;align-items:center;justify-content:center}
-.touch-stick span{font-size:10px;color:#5a7050;letter-spacing:1px;pointer-events:none}
-.touch-mid{display:flex;flex-direction:column;gap:6px}
-.touch-util{min-width:52px;height:36px;border-radius:6px;border:1px solid #4a6238;background:#1a2618;color:var(--accent2);font:700 11px Orbitron,sans-serif;touch-action:none}
-.touch-fire{width:78px;height:78px;border-radius:50%;border:2px solid var(--accent2);background:radial-gradient(circle at 35% 30%,#a8c45a,#3a5028);color:#0e140a;font:800 13px Orbitron,sans-serif;letter-spacing:1px;touch-action:none;box-shadow:0 0 18px #a8c45a44}
-.touch-fire:active,.touch-fire.pressed{transform:scale(.94);box-shadow:0 0 24px #a8c45a88}
 
 @media(max-width:900px){
   .tank-grid{grid-template-columns:repeat(2,1fr)}
   .hud-block{font-size:10px}
   .hud-title{font-size:10px}
 }
-/* Touch pad solo en dispositivos táctiles reales */
-@media(pointer:coarse){
-  #touchPad.show{display:block}
-}
 @media(max-width:500px){
   .panel-card{padding:16px 12px}
   .tank-grid{gap:6px}
-  .touch-stick{width:108px;height:98px}
-  .touch-fire{width:70px;height:70px;font-size:12px}
   .hp-bar{width:90px}
 }
 </style>
@@ -185,11 +170,28 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:flex-
         </div>
 
         <button class="btn" id="btnDeploy">▶ DESPLEGAR TANQUE</button>
+        <button class="btn btn-ghost" id="btnManual">📖 MANUAL DE USUARIO</button>
         <div class="foot-stats">
           <span>✦ 6 BLINDADOS</span>
           <span>✦ 8 FRENTES</span>
           <span>✦ SISTEMA DE DAÑO</span>
         </div>
+      </div>
+    </div>
+
+    <!-- MANUAL DE USUARIO -->
+    <div class="panel" id="panelManual">
+      <div class="panel-card">
+        <div class="kicker">IRON FRONT · GUÍA OPERATIVA</div>
+        <h2>MANUAL DE USUARIO</h2>
+        <p class="lead">Tu objetivo es sobrevivir, derribar aeronaves y recoger suministros para mantener el blindado en combate.</p>
+        <h3 style="color:var(--accent2);margin:12px 0 6px;font-family:Orbitron,sans-serif;font-size:13px">CONTROLES DE PC</h3>
+        <p><b>W / A / S / D</b> o <b>flechas</b>: mover el tanque. <b>Ratón</b>: orientar el movimiento horizontal y apuntar automáticamente a las amenazas. <b>Clic sostenido</b> o <b>ESPACIO</b>: disparar. <b>G</b>: activar un poder especial. <b>P</b> o <b>ESC</b>: pausar.</p>
+        <h3 style="color:var(--accent2);margin:12px 0 6px;font-family:Orbitron,sans-serif;font-size:13px">CONSEJOS</h3>
+        <p>Recoge cajas de munición y reparación. Las cajas pueden ofrecer blindaje, disparo rápido, misiles o vidas. Cambia de vehículo, mundo y dificultad antes de desplegarte.</p>
+        <h3 style="color:var(--accent2);margin:12px 0 6px;font-family:Orbitron,sans-serif;font-size:13px">CONFIGURACIÓN Y PAUSA</h3>
+        <p>Abre la pausa con <b>P</b> o <b>ESC</b> para ajustar sensibilidad, vibración, ayuda y modo de jugabilidad. Puedes continuar, reiniciar la misión o volver al menú.</p>
+        <button class="btn" id="btnManualBack">VOLVER AL MENÚ</button>
       </div>
     </div>
 
@@ -205,6 +207,15 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:flex-
             <input type="range" id="cfgSens" min="0.4" max="1.6" step="0.05" value="1">
             <span class="cfg-val" id="cfgSensVal">1.0</span>
           </div>
+        </div>
+        <div class="field">
+          <label>MODO DE JUGABILIDAD</label>
+          <select id="cfgPlayMode">
+            <option value="standard">ESTÁNDAR · EQUILIBRADO</option>
+            <option value="assault">ASALTO · DISPARO RÁPIDO</option>
+            <option value="survival">SUPERVIVENCIA · MÁS RESISTENCIA</option>
+          </select>
+          <p id="cfgModeDesc" style="font-size:11px;margin:6px 0 0">Experiencia equilibrada para jugar con precisión.</p>
         </div>
         <div class="field">
           <label>VIBRACIÓN</label>
@@ -244,16 +255,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:flex-
     </div>
   </div>
 
-  <div id="touchPad">
-    <div class="touch-inner">
-      <div class="touch-stick" id="touchStick"><span>MOVER</span></div>
-      <div class="touch-mid">
-        <button class="touch-util" id="touchPause">⏸</button>
-        <button class="touch-util" id="touchSpecial">⚡</button>
-      </div>
-      <button class="touch-fire" id="touchFire">FIRE</button>
-    </div>
-  </div>
+
 </div>
 
 <script>
@@ -274,6 +276,7 @@ let W=800,H=600,scale=1;
 let running=false,paused=false,raf=0;
 let score=0,record=ls.getN("record",0),lives=3,ammo=100,wave=0;
 let selectedTank="m1",selectedWorld=1,difficulty="normal";
+let playMode=ls.get("playMode","standard");
 let specialCharges=3,combo=0,comboTimer=0;
 let shield=0,rapid=0,triple=0,pierce=0,invisible=0,missileP=0;
 let lastShot=0,lastSpawn=0,lastSupply=0,regenTimer=0;
@@ -334,7 +337,7 @@ window.addEventListener("resize",resize);
 resize();
 
 function showPanel(id){
-  ["panelStart","panelPause","panelOver"].forEach(p=>{
+  ["panelStart","panelPause","panelOver","panelManual"].forEach(p=>{
     $(p).classList.toggle("show", p===id);
   });
 }
@@ -387,18 +390,6 @@ function doVibrate(ms){
   try{ const fn=navigator.vibrate||navigator.webkitVibrate; if(fn) fn.call(navigator,ms||30); }catch(e){}
 }
 
-function isTouchDevice(){
-  /* Solo táctil real: no se muestra por ancho de pantalla */
-  try{
-    if(window.matchMedia("(pointer:coarse)").matches) return true;
-    if(window.matchMedia("(hover:none) and (pointer:coarse)").matches) return true;
-  }catch(e){}
-  return false;
-}
-function showTouch(){ $("touchPad").classList.toggle("show", isTouchDevice()); }
-showTouch();
-window.addEventListener("resize",showTouch);
-
 /* Input */
 document.addEventListener("keydown",e=>{
   if(["ArrowLeft","a","A"].includes(e.key)) keys.l=1;
@@ -432,34 +423,6 @@ canvas.addEventListener("pointermove",e=>{
 canvas.addEventListener("pointerup",()=>{ shooting=false; });
 canvas.addEventListener("pointercancel",()=>{ shooting=false; });
 
-const stickEl=$("touchStick");
-stickEl.addEventListener("pointerdown",e=>{
-  stickActive=true; stickId=e.pointerId;
-  stickEl.setPointerCapture(e.pointerId);
-  updateStick(e);
-});
-stickEl.addEventListener("pointermove",e=>{ if(stickActive&&e.pointerId===stickId) updateStick(e); });
-stickEl.addEventListener("pointerup",e=>{ if(e.pointerId===stickId){stickActive=false;stickDX=stickDY=0;} });
-stickEl.addEventListener("pointercancel",()=>{ stickActive=false;stickDX=stickDY=0; });
-function updateStick(e){
-  const r=stickEl.getBoundingClientRect();
-  const cx=r.left+r.width/2, cy=r.top+r.height/2;
-  stickDX=Math.max(-1,Math.min(1,(e.clientX-cx)/(r.width/2)));
-  stickDY=Math.max(-1,Math.min(1,(e.clientY-cy)/(r.height/2)));
-}
-
-$("touchFire").addEventListener("pointerdown",e=>{
-  shooting=true; fireId=e.pointerId;
-  $("touchFire").classList.add("pressed");
-  e.preventDefault();
-});
-$("touchFire").addEventListener("pointerup",e=>{
-  if(e.pointerId===fireId){ shooting=false; $("touchFire").classList.remove("pressed"); }
-});
-$("touchFire").addEventListener("pointercancel",()=>{ shooting=false; $("touchFire").classList.remove("pressed"); });
-$("touchPause").addEventListener("click",togglePause);
-$("touchSpecial").addEventListener("click",useSpecial);
-
 /* Menus */
 document.querySelectorAll(".tank-btn").forEach(btn=>{
   btn.addEventListener("click",()=>{
@@ -478,6 +441,8 @@ document.querySelectorAll(".diff-btn").forEach(btn=>{
 $("selWorld").addEventListener("change",()=>{ selectedWorld=Number($("selWorld").value)||1; });
 
 $("btnDeploy").addEventListener("click",startGame);
+$("btnManual").addEventListener("click",()=>showPanel("panelManual"));
+$("btnManualBack").addEventListener("click",()=>showPanel("panelStart"));
 $("btnResume").addEventListener("click",()=>{ paused=false; hidePanels(); loop(); });
 $("btnRestartPause").addEventListener("click",startGame);
 $("btnMenuPause").addEventListener("click",goMenu);
@@ -487,6 +452,21 @@ $("btnMenuOver").addEventListener("click",goMenu);
 /* Pause config */
 $("cfgSens").value=sens;
 $("cfgSensVal").textContent=sens.toFixed(1);
+$("cfgPlayMode").value=playMode;
+function updatePlayModeDescription(){
+  const descriptions={
+    standard:"Experiencia equilibrada para jugar con precisión.",
+    assault:"El cañón dispara más rápido, pero consume munición con mayor rapidez.",
+    survival:"El blindado resiste mejor los impactos y las amenazas aparecen algo más despacio."
+  };
+  $("cfgModeDesc").textContent=descriptions[playMode]||descriptions.standard;
+}
+$("cfgPlayMode").addEventListener("change",()=>{
+  playMode=$("cfgPlayMode").value;
+  ls.set("playMode",playMode);
+  updatePlayModeDescription();
+});
+updatePlayModeDescription();
 $("cfgSens").addEventListener("input",()=>{
   sens=Number($("cfgSens").value)||1;
   $("cfgSensVal").textContent=sens.toFixed(1);
@@ -550,7 +530,7 @@ function tankStat(){ return TANKS[selectedTank]||TANKS.m1; }
 function shoot(){
   const now=performance.now();
   const t=tankStat();
-  const cd=(rapid>0?75:155)/t.fire;
+  const cd=(rapid>0?75:(playMode==="assault"?112:155))/t.fire;
   if(now-lastShot<cd) return;
   if(ammo<=0){ setMsg("¡SIN MUNICIÓN!",40); return; }
   lastShot=now;
@@ -632,7 +612,7 @@ function applyDamage(amount){
     return;
   }
   const t=tankStat();
-  const dmg=amount / t.armor;
+  const dmg=amount / (t.armor*(playMode==="survival"?1.3:1));
   hp-=dmg;
   damageFlash=12;
   regenTimer=0; /* interrupt regen */
@@ -720,9 +700,8 @@ function update(dt){
   const d=DIFF[difficulty];
 
   let mx=mouse.x;
-  if(stickActive) mx=player.x+stickDX*180*scale*sens;
-  else if(keys.l||keys.r) mx=player.x+(keys.r-keys.l)*160*scale*t.speed*sens;
-  const smooth=stickActive?0.22:0.16;
+  if(keys.l||keys.r) mx=player.x+(keys.r-keys.l)*160*scale*t.speed*sens;
+  const smooth=0.16;
   player.x+=(mx-player.x)*smooth*t.speed;
   player.x=Math.max(player.size*1.5,Math.min(W-player.size*1.5,player.x));
   player.y=H*0.82;
@@ -752,7 +731,7 @@ function update(dt){
   phaseT++;
   /* Escalado moderado: sube despacio con las oleadas */
   const waveFactor=Math.min(wave*28, 280);
-  const spawnRate=(920-waveFactor)*d.spawn;
+  const spawnRate=(920-waveFactor)*d.spawn*(playMode==="survival"?1.18:1);
   const maxEnemies=difficulty==="hard"?9:(difficulty==="easy"?6:7);
   if(performance.now()-lastSpawn>spawnRate && enemies.length<maxEnemies){
     if(wave>0 && wave%6===0 && !enemies.some(e=>e.boss)){
