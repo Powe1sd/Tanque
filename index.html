@@ -15,10 +15,11 @@
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:'Share Tech Mono',monospace;-webkit-tap-highlight-color:transparent}
 body{display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
-/* Preferir horizontal */
+/* Preferir horizontal: aviso si está en vertical */
 @media (orientation: portrait){
   body::before{
-    content:"Gira el dispositivo a HORIZONTAL ▶";
+    content:"Gira el dispositivo a HORIZONTAL ▶\A (o toca la pantalla)";
+    white-space:pre-line;
     position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
     background:#0b100c;color:#d4e89a;font:700 16px Orbitron,sans-serif;letter-spacing:2px;text-align:center;padding:24px;
   }
@@ -565,14 +566,31 @@ function startGame(){
   lastShot=0;lastSpawn=0;lastSupply=performance.now();lastTrap=performance.now();
   running=true;paused=false;hidePanels();updateHUD();setPauseBtn(true);
   ensureAudio(); startAmbient(); sfx("power");
-  /* Intentar orientación horizontal */
-  try{
-    if(screen.orientation && screen.orientation.lock){
-      screen.orientation.lock("landscape").catch(()=>{});
-    }
-  }catch(e){}
+  lockLandscape();
   setMsg("DESPLIEGUE · "+TANKS[selectedTank].name,90);loop();
 }
+function lockLandscape(){
+  try{
+    const o = screen.orientation || screen.mozOrientation || screen.msOrientation;
+    if(screen.orientation && typeof screen.orientation.lock === "function"){
+      screen.orientation.lock("landscape").catch(()=>{});
+      screen.orientation.lock("landscape-primary").catch(()=>{});
+    } else if(screen.lockOrientation){
+      screen.lockOrientation("landscape");
+    } else if(screen.mozLockOrientation){
+      screen.mozLockOrientation("landscape");
+    } else if(screen.msLockOrientation){
+      screen.msLockOrientation("landscape");
+    }
+  }catch(e){}
+}
+/* Bloquear horizontal en el primer toque/clic (los navegadores lo exigen) */
+["pointerdown","touchstart","click"].forEach(ev=>{
+  document.addEventListener(ev, function once(){
+    lockLandscape();
+  }, {passive:true});
+});
+lockLandscape();
 function endGame(){
   if(!running)return;running=false;cancelAnimationFrame(raf);
   stopAmbient(); setPauseBtn(false); sfx("explode");
