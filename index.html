@@ -457,18 +457,23 @@ document.addEventListener("keyup",e=>{
   if(["ArrowDown","s","S"].includes(e.key))keys.d=0;
   if(e.key===" "||e.key==="Enter")shooting=false;
 });
+/* Offset vertical (~2.5 cm) para que el tanque quede por encima del dedo y se vea */
+function touchOffsetY(){
+  /* ~95 px CSS ≈ 2.5 cm en pantallas típicas; se convierte a coords del canvas */
+  return 95 * (H / (canvas.getBoundingClientRect().height || H));
+}
 canvas.addEventListener("pointerdown",e=>{
   if(!running||paused)return;
   const r=canvas.getBoundingClientRect();
   mouse.x=(e.clientX-r.left)*(W/r.width);
-  mouse.y=(e.clientY-r.top)*(H/r.height);
+  mouse.y=(e.clientY-r.top)*(H/r.height) - touchOffsetY();
   shooting=true;canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener("pointermove",e=>{
   if(!running||paused)return;
   const r=canvas.getBoundingClientRect();
   mouse.x=(e.clientX-r.left)*(W/r.width);
-  mouse.y=(e.clientY-r.top)*(H/r.height);
+  mouse.y=(e.clientY-r.top)*(H/r.height) - touchOffsetY();
 });
 canvas.addEventListener("pointerup",()=>{shooting=false});
 canvas.addEventListener("pointercancel",()=>{shooting=false});
