@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="screen-orientation" content="landscape">
 <title>IRON FRONT — Comando Terrestre</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
@@ -15,15 +14,6 @@
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:'Share Tech Mono',monospace;-webkit-tap-highlight-color:transparent}
 body{display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
-/* Preferir horizontal: aviso si está en vertical */
-@media (orientation: portrait){
-  body::before{
-    content:"Gira el dispositivo a HORIZONTAL ▶\A (o toca la pantalla)";
-    white-space:pre-line;
-    position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
-    background:#0b100c;color:#d4e89a;font:700 16px Orbitron,sans-serif;letter-spacing:2px;text-align:center;padding:24px;
-  }
-}
 #app{width:100%;max-width:1400px;height:100%;display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 #gameWrap{position:relative;flex:1;min-height:0;border:2px solid var(--border);border-radius:8px;overflow:hidden;background:#0e160e;box-shadow:0 0 0 4px #0a100a,0 20px 60px #000a}
 #gameCanvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
@@ -242,7 +232,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:flex-
           <label>CADENCIA ENEMIGA</label>
           <select id="cfgEnemyFire">
             <option value="calm">CALMADA · POCOS DISPAROS</option>
-            <option value="normal">NORMAL · EQUILIBRADA</option>
+            <option value="normal" selected>NORMAL · EQUILIBRADA</option>
             <option value="heavy">INTENSA · MÁS PRESIÓN</option>
           </select>
           <p style="font-size:11px;margin:6px 0 0;color:var(--muted)">Al inicio casi no disparan; sube con las oleadas. Misiles en naves pesadas.</p>
@@ -309,8 +299,8 @@ let selectedTank="m1",selectedWorld=1,difficulty=ls.get("diff","normal");
 if(!["easy","normal","hard","extreme"].includes(difficulty)) difficulty="normal";
 let playMode=ls.get("playMode","standard");
 let fireMode=ls.get("fireMode","manual");
-let enemyFire=ls.get("enemyFire","calm");
-if(!["calm","normal","heavy"].includes(enemyFire)) enemyFire="calm";
+let enemyFire=ls.get("enemyFire","normal");
+if(!["calm","normal","heavy"].includes(enemyFire)) enemyFire="normal";
 let specialCharges=4,combo=0,comboTimer=0;
 let shield=0,rapid=0,triple=0,pierce=0,invisible=0,missileP=0;
 let freeze=0,dual=0,boost=0,magnet=0;
@@ -566,31 +556,8 @@ function startGame(){
   lastShot=0;lastSpawn=0;lastSupply=performance.now();lastTrap=performance.now();
   running=true;paused=false;hidePanels();updateHUD();setPauseBtn(true);
   ensureAudio(); startAmbient(); sfx("power");
-  lockLandscape();
   setMsg("DESPLIEGUE · "+TANKS[selectedTank].name,90);loop();
 }
-function lockLandscape(){
-  try{
-    const o = screen.orientation || screen.mozOrientation || screen.msOrientation;
-    if(screen.orientation && typeof screen.orientation.lock === "function"){
-      screen.orientation.lock("landscape").catch(()=>{});
-      screen.orientation.lock("landscape-primary").catch(()=>{});
-    } else if(screen.lockOrientation){
-      screen.lockOrientation("landscape");
-    } else if(screen.mozLockOrientation){
-      screen.mozLockOrientation("landscape");
-    } else if(screen.msLockOrientation){
-      screen.msLockOrientation("landscape");
-    }
-  }catch(e){}
-}
-/* Bloquear horizontal en el primer toque/clic (los navegadores lo exigen) */
-["pointerdown","touchstart","click"].forEach(ev=>{
-  document.addEventListener(ev, function once(){
-    lockLandscape();
-  }, {passive:true});
-});
-lockLandscape();
 function endGame(){
   if(!running)return;running=false;cancelAnimationFrame(raf);
   stopAmbient(); setPauseBtn(false); sfx("explode");
@@ -773,11 +740,29 @@ function update(){
   for(let i=enemies.length-1;i>=0;i--){
     const e=enemies[i];
     const frz=freeze>0?0.35:1;
-    if(e.arriving){e.y+=e.vy*1.8*frz;if(e.y>=e.baseY){e.y=e.baseY;e.arriving=false}}
+    if(e.arriving){e.y+=e.vy*2.2*frz;if(e.y>=e.baseY){e.y=e.baseY;e.arriving=false}}
     else{
-      e.zigzag+=0.05*e.zigDir*frz;e.x+=Math.sin(e.zigzag)*(e.boss?2.2:3.2)*scale*frz;
-      e.y=e.baseY+Math.sin(e.zigzag*0.7)*12*scale;
+      /* Movimiento más agresivo: zigzag rápido, picados y cambio de altura */
+      e.zigzag=(e.zigzag||0)+0.09*e.zigDir*frz;
+      const spdX=(e.boss?2.8:e.type==="strafer"?5.5:e.type==="kamikaze"?6:3.8)*scale*frz;
+      e.x+=Math.sin(e.zigzag)*spdX;
+      /* Picado hacia el tanque de vez en cuando */
+      if(!e.diveT) e.diveT=0;
+      e.diveT--;
+      if(e.diveT<=0 && !e.boss && Math.random()<0.012){
+        e.diving=true; e.diveT=90+Math.random()*40;
+      }
+      if(e.diving){
+        e.y+=2.8*scale*frz;
+        if(e.y>H*0.55 || e.diveT<=20){ e.diving=false; e.baseY=40+Math.random()*H*0.22; }
+      } else {
+        e.y+=(e.baseY-e.y)*0.04*frz;
+        e.y+=Math.sin(e.zigzag*0.9)*0.8*scale*frz;
+        /* Cambiar altura base periódicamente */
+        if(Math.random()<0.008) e.baseY=35+Math.random()*H*0.28;
+      }
       if(e.x<5){e.x=5;e.zigDir=1}if(e.x+e.s>W-5){e.x=W-e.s-5;e.zigDir=-1}
+      if(e.y<10) e.y=10;
       if(freeze<=0){e.shootT--;if(e.shootT<=0){enemyShoot(e);e.shootT=nextEnemyShootCD(e)}}
     }
     const cx=e.x+e.s/2,cy=e.y+e.s/2;
@@ -1116,14 +1101,14 @@ function fireMul(){
 }
 function nextEnemyShootCD(e){
   const mul=fireMul();
-  /* Al principio disparan muy poco; sube con la oleada */
-  const early=wave<3?1.8:wave<6?1.25:1;
-  let base=e.boss?55:e.type==="heavy"?90:e.type==="bomber"?80:e.type==="kamikaze"?110:e.type==="drone"?75:70;
-  return (base+Math.random()*35)*mul*early;
+  /* Disparan más a menudo desde el principio */
+  const early=wave<3?1.15:wave<6?1.0:0.85;
+  let base=e.boss?38:e.type==="heavy"?55:e.type==="bomber"?50:e.type==="kamikaze"?70:e.type==="drone"?45:42;
+  return (base+Math.random()*22)*mul*early;
 }
 function enemyShoot(e){
-  /* Oleadas 0–2: casi no disparan balas (solo ocasional); luego misiles en pesados */
-  if(wave<2 && !e.boss && Math.random()<0.55) return;
+  /* Siempre pueden disparar; en oleadas bajas un poco menos de ráfagas */
+  if(wave<2 && !e.boss && Math.random()<0.2) return;
   const cx=e.x+e.s/2,cy=e.y+e.s/2,dx=player.x-cx,dy=player.y-cy;
   const len=Math.hypot(dx,dy)||1;
   const useMissile=e.boss||e.type==="bomber"||e.type==="heavy"||(e.type==="strafer"&&wave>=5);
