@@ -117,7 +117,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:flex-
       <div class="panel-card">
         <div class="kicker">COMANDO TERRESTRE · OPERACIÓN 01</div>
         <h1>IRON FRONT</h1>
-        <p class="lead">Controla el blindado. Intercepta escuadrones aéreos. Cambia de frente y sobrevive el mayor tiempo posible.</p>
+        <p class="lead">Controla el blindado con el dedo o teclado. Enfréntate a oleadas de enemigos, esquiva señales de tráfico y trampas en la carretera. Sobrevive el mayor tiempo posible.</p>
         <div class="field">
           <label>SELECCIONA TU VEHÍCULO</label>
           <div class="tank-grid" id="tankGrid">
@@ -156,8 +156,8 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:flex-
         <button class="btn btn-ghost" id="btnManual">📖 MANUAL DE USUARIO</button>
         <div class="foot-stats">
           <span>✦ 6 BLINDADOS</span>
-          <span>✦ 8 FRENTES</span>
-          <span>✦ SISTEMA DE DAÑO</span>
+          <span>✦ OLEADAS</span>
+          <span>✦ SEÑALES Y TRAMPAS</span>
         </div>
       </div>
     </div>
@@ -169,11 +169,12 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:flex-
         <p class="lead">Tu objetivo es sobrevivir, derribar aeronaves enemigas y recoger suministros para mantener el blindado en combate el mayor tiempo posible.</p>
         <h3>CONTROLES</h3>
         <p><b>W A S D</b> o <b>flechas</b>: mover el tanque por la <b>carretera</b> (no puedes salirte de la pista).<br>
-        <b>Ratón</b>: desplaza el tanque dentro de la carretera. La torreta apunta de forma estable al enemigo más cercano.<br>
+        <b>Dedo / Ratón</b>: el tanque se posiciona justo debajo de donde tocas o apuntas. Ideal para móviles.<br>
         <b>Clic / ESPACIO</b>: disparo manual. En pausa puedes activar <b>disparo automático</b>.<br>
         <b>G</b>: poder especial. <b>P</b> o <b>ESC</b>: pausa y configuración (audio, modo de disparo, etc.).</p>
         <h3>OBSTÁCULOS Y PODERES</h3>
-        <p>Trampas: <b>minas</b>, <b>púas</b>, <b>barriles</b>, <b>fuego</b>, <b>aceite</b> y <b>racimos</b>. Suministros: mucha <b>munición</b>, reparación y poderes (ráfaga, doble cañón, congelación, imán, impulso…). El escudo es poco frecuente.</p>
+        <p>Trampas y señales de tráfico en la carretera: <b>minas</b>, <b>púas</b>, <b>barriles</b>, <b>fuego</b>, <b>aceite</b>, <b>racimos</b>, <b>conos policiales</b>, <b>barreras de obra</b>, <b>señales STOP</b>, <b>ceda el paso</b>, <b>badénes</b> y <b>señales de peligro</b>. Esquiva los conos y señales para ganar puntos extra. Suministros: mucha <b>munición</b>, reparación y poderes (ráfaga, doble cañón, congelación, imán, impulso…). El escudo es poco frecuente.</p>
+        <p>Los enemigos llegan por <b>oleadas</b>: limpia cada grupo antes de que aparezca el siguiente. Cada 5 oleadas aparece un jefe.</p>
         <h3>INTEGRIDAD Y VIDAS</h3>
         <p>El tanque no muere de un solo impacto. Cada bala o choque resta <b>integridad</b>. Al llegar a cero pierdes una <b>vida</b> y recuperas parte del blindaje. Sin vidas, la misión termina.</p>
         <h3>SUMINISTROS</h3>
@@ -569,8 +570,7 @@ function shoot(){
   lastShot=now;ammo=Math.max(0,ammo-1);
   const bx=player.x,by=player.y-player.size*1.2,speed=13*scale*(rapid>0?1.2:1);
 
-  /* Disparo RECTO hacia arriba, con leve corrección hacia el enemigo más cercano
-     (máximo ~18°) para que la mira no se tuerza */
+  /* Disparo CASI RECTO hacia arriba. Corrección mínima (~6°) para que no se tuerza */
   let aimX=0, aimY=-1;
   let best=1e9, target=null;
   for(const e of enemies){
@@ -583,10 +583,10 @@ function shoot(){
     const dx=target.x+target.s/2-bx, dy=target.y+target.s/2-by;
     const len=Math.hypot(dx,dy)||1;
     let nx=dx/len, ny=dy/len;
-    /* limitar ángulo respecto a la vertical */
-    const maxHoriz=0.32; /* ~18° */
+    /* Ángulo máximo muy reducido para que la mira quede casi recta */
+    const maxHoriz=0.11; /* ~6° */
     if(Math.abs(nx)>maxHoriz){ nx=Math.sign(nx)*maxHoriz; ny=-Math.sqrt(1-nx*nx); }
-    if(ny>-0.85) ny=-0.85;
+    if(ny>-0.95) ny=-0.95;
     const nlen=Math.hypot(nx,ny)||1;
     aimX=nx/nlen; aimY=ny/nlen;
   }
@@ -671,12 +671,13 @@ function burstParticles(x,y,n,col){spawnParticle(x,y,col,n)}
 
 function update(){
   const t=tankStat(),d=DIFF[difficulty];
-  /* Movimiento libre: izquierda/derecha y arriba/abajo */
+  /* Movimiento: el tanque se posiciona bajo el dedo/ratón de forma más directa y responsiva */
   let mx=mouse.x, my=mouse.y;
   const spdBoost=boost>0?1.35:1;
-  if(keys.l||keys.r) mx=player.x+(keys.r-keys.l)*170*scale*t.speed*sens*spdBoost;
-  if(keys.u||keys.d) my=player.y+(keys.d-keys.u)*120*scale*t.speed*sens*spdBoost;
-  const smooth=0.18;
+  if(keys.l||keys.r) mx=player.x+(keys.r-keys.l)*190*scale*t.speed*sens*spdBoost;
+  if(keys.u||keys.d) my=player.y+(keys.d-keys.u)*140*scale*t.speed*sens*spdBoost;
+  /* Suavizado más alto para que al tocar con el dedo el tanque quede justo debajo del dedo */
+  const smooth=0.42;
   player.x+=(mx-player.x)*smooth*t.speed*spdBoost;
   player.y+=(my-player.y)*smooth*t.speed*spdBoost;
   /* Confinado a la CARRETERA (pista) */
@@ -696,20 +697,35 @@ function update(){
   regenTimer++;
   if(regenTimer>140&&hp<maxHp&&invisible<=0&&regenTimer%18===0){hp=Math.min(maxHp,hp+1.8);updateHPBar()}
   phaseT++;
-  const waveFactor=Math.min(wave*28,280);
-  const spawnRate=(720-waveFactor)*d.spawn*(playMode==="survival"?1.12:1);
-  const maxEnemies=difficulty==="extreme"?14:difficulty==="hard"?12:difficulty==="easy"?9:11;
-  if(performance.now()-lastSpawn>spawnRate&&enemies.length<maxEnemies){
-    if(wave>0&&wave%6===0&&!enemies.some(e=>e.boss)){spawnBoss();wave++}
-    else{spawnEnemy();if(Math.random()<0.4)spawnEnemy();if(wave>5&&Math.random()<0.25)spawnEnemy()}
+  /* SISTEMA DE OLEADAS: los enemigos llegan por grupos, no todos a la vez */
+  const waveFactor=Math.min(wave*22,240);
+  const spawnRate=(850-waveFactor)*d.spawn*(playMode==="survival"?1.15:1);
+  const maxEnemies=difficulty==="extreme"?12:difficulty==="hard"?10:difficulty==="easy"?7:9;
+  const enemiesInWave = Math.min(4 + Math.floor(wave*0.7) + (difficulty==="extreme"?2:difficulty==="hard"?1:0), maxEnemies);
+  if(enemies.length===0 && phaseT>50){
+    /* Nueva oleada limpia */
+    wave++;
+    phaseT=0;
+    lastSpawn=0;
+    setMsg("✈ OLEADA "+wave+(wave%5===0?" · JEFE EN CAMINO":""), 100);
+    sfx("power");
+  }
+  if(performance.now()-lastSpawn>spawnRate && enemies.length < enemiesInWave){
+    if(wave>0 && wave%5===0 && !enemies.some(e=>e.boss) && enemies.length===0){
+      spawnBoss();
+    } else {
+      spawnEnemy();
+      if(wave>2 && Math.random()<0.35 && enemies.length < enemiesInWave) spawnEnemy();
+      if(wave>6 && Math.random()<0.2 && enemies.length < enemiesInWave) spawnEnemy();
+    }
     lastSpawn=performance.now();
   }
-  if(enemies.length===0&&phaseT>70){wave++;phaseT=0;lastSpawn=0}
   if(ammo<=12&&performance.now()-lastSupply>4500){spawnPickup(W*0.3+Math.random()*W*0.4,35,"ammo");lastSupply=performance.now()}
 
-  /* Trampas y conos: intervalos más largos, no cada rato */
-  if(performance.now()-lastTrap>Math.max(4500,7200-wave*60)){
+  /* Trampas y señales de tráfico en la carretera */
+  if(performance.now()-lastTrap>Math.max(3800,6500-wave*55)){
     spawnTrap();
+    if(wave>4 && Math.random()<0.35) spawnTrap(); /* a veces dos a la vez */
     lastTrap=performance.now();
   }
   updateTraps();
@@ -779,8 +795,11 @@ function update(){
   updateHUD();
 }
 function spawnTrap(){
-  const types=["mine","spike","barrel","fire","oil","cluster"];
-  if(wave>=4) types.push("mine","barrel");
+  /* Señales de tráfico y trampas de carretera: conos, barreras, señales, baches, etc. */
+  const types=["mine","spike","barrel","fire","oil","cluster","cone","barrier","stop","yield","speedbump","sign"];
+  if(wave>=3) types.push("cone","barrier","cone");
+  if(wave>=5) types.push("mine","barrel","stop");
+  if(wave>=7) types.push("cluster","yield");
   const type=types[Math.floor(Math.random()*types.length)];
   const x=40+Math.random()*(W-80);
   const y=H*(0.74+Math.random()*0.14);
@@ -790,6 +809,12 @@ function spawnTrap(){
   else if(type==="fire") traps.push({type,x,y,w:70*scale,h:28*scale,life:240,pulse:0});
   else if(type==="oil") traps.push({type,x,y,w:80*scale,h:36*scale,life:360});
   else if(type==="cluster") traps.push({type,x,y:H*0.35,r:12*scale,life:220,armed:true});
+  else if(type==="cone") traps.push({type,x,y,r:11*scale,h:26*scale,life:480,hit:false,scored:false});
+  else if(type==="barrier") traps.push({type,x,y,w:70*scale,h:14*scale,life:400,hp:3});
+  else if(type==="stop") traps.push({type,x,y,r:16*scale,life:380,hit:false});
+  else if(type==="yield") traps.push({type,x,y,r:15*scale,life:360,hit:false});
+  else if(type==="speedbump") traps.push({type,x,y,w:90*scale,h:12*scale,life:340});
+  else if(type==="sign") traps.push({type,x,y,r:14*scale,life:400,hit:false,variant:Math.floor(Math.random()*3)});
 }
 function updateTraps(){
   for(let i=traps.length-1;i>=0;i--){
@@ -862,6 +887,64 @@ function updateTraps(){
         setMsg("+3 ZIGZAG",40);
         sfx("pickup");
         updateHUD();
+      }
+    } else if(t.type==="barrier"){
+      /* Barrera de obra: daño al chocar, se puede destruir a tiros */
+      for(let j=bullets.length-1;j>=0;j--){
+        const b=bullets[j];
+        if(b.x>t.x-t.w/2-4&&b.x<t.x+t.w/2+4&&b.y>t.y-t.h-4&&b.y<t.y+t.h+4){
+          t.hp--; bullets.splice(j,1);
+          if(t.hp<=0){ t.life=0; burstParticles(t.x,t.y,12,"180,160,100"); score+=5; setMsg("+5 BARRERA",35); sfx("hit"); updateHUD(); }
+        }
+      }
+      if(player.x>t.x-t.w/2&&player.x<t.x+t.w/2&&player.y>t.y-t.h&&player.y<t.y+t.h+player.size*0.4){
+        applyDamage(DIFF[difficulty].eDmg*0.7);
+        player.x += (player.x < t.x ? -8 : 8);
+        mouse.x = player.x;
+        if(!running) return;
+      }
+    } else if(t.type==="stop"){
+      /* Señal de STOP: daño moderado + breve frenado */
+      const d=Math.hypot(player.x-t.x,player.y-t.y);
+      if(!t.hit && d < t.r + player.size*0.6){
+        t.hit=true;
+        applyDamage(DIFF[difficulty].eDmg*0.45);
+        boost = Math.min(boost, 20); /* reduce impulso */
+        setMsg("¡STOP!",35);
+        sfx("hit");
+        if(!running) return;
+      }
+    } else if(t.type==="yield"){
+      /* Señal de CEDA EL PASO: daño leve + puntos si se evita */
+      const d=Math.hypot(player.x-t.x,player.y-t.y);
+      if(!t.hit && d < t.r + player.size*0.55){
+        t.hit=true;
+        applyDamage(DIFF[difficulty].eDmg*0.3);
+        sfx("hit");
+        if(!running) return;
+      } else if(!t.scored && !t.hit && d < t.r + 35*scale){
+        t.scored=true;
+        score+=2;
+        setMsg("+2 CEDA",30);
+        updateHUD();
+      }
+    } else if(t.type==="speedbump"){
+      /* Badén / reductor: sacude y daño leve */
+      if(player.x>t.x-t.w/2&&player.x<t.x+t.w/2&&player.y>t.y-t.h&&player.y<t.y+t.h+8){
+        applyDamage(DIFF[difficulty].eDmg*0.2);
+        screenShake = Math.max(screenShake, 8);
+        player.y += 2;
+        if(!running) return;
+      }
+    } else if(t.type==="sign"){
+      /* Señal de tráfico genérica (obra / peligro / límite) */
+      const d=Math.hypot(player.x-t.x,player.y-t.y);
+      if(!t.hit && d < t.r + player.size*0.5){
+        t.hit=true;
+        applyDamage(DIFF[difficulty].eDmg*0.35);
+        burstParticles(t.x,t.y,5,"220,180,60");
+        sfx("hit");
+        if(!running) return;
       }
     }
     if(t.life<=0) traps.splice(i,1);
@@ -938,6 +1021,89 @@ function drawTraps(){
         ctx.textAlign="center";ctx.fillText("+3",t.x,t.y-h-6);
       }
       ctx.globalAlpha=1;
+    } else if(t.type==="barrier"){
+      /* Barrera de obras a rayas */
+      ctx.fillStyle="#2a2a22";
+      ctx.fillRect(t.x-t.w/2,t.y-t.h/2,t.w,t.h);
+      ctx.fillStyle="#e8a020";
+      for(let k=0;k<5;k++){
+        ctx.fillRect(t.x-t.w/2 + k*(t.w/5), t.y-t.h/2, t.w/10, t.h);
+      }
+      ctx.strokeStyle="#c08020";ctx.lineWidth=1.5;
+      ctx.strokeRect(t.x-t.w/2,t.y-t.h/2,t.w,t.h);
+    } else if(t.type==="stop"){
+      /* Señal STOP octogonal */
+      ctx.save();
+      ctx.translate(t.x,t.y);
+      ctx.fillStyle="#1a1a18";
+      ctx.beginPath();ctx.ellipse(0,6,t.r*0.9,t.r*0.25,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#c03028";
+      ctx.beginPath();
+      for(let i=0;i<8;i++){
+        const a=(i/8)*Math.PI*2 - Math.PI/8;
+        const px=Math.cos(a)*t.r, py=Math.sin(a)*t.r - 4;
+        if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.closePath();ctx.fill();
+      ctx.strokeStyle="#f0e8e0";ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle="#fff";ctx.font=`bold ${8*scale}px Orbitron`;
+      ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("STOP",0,-4);
+      ctx.restore();
+    } else if(t.type==="yield"){
+      /* Señal CEDA (triángulo invertido) */
+      ctx.save();
+      ctx.translate(t.x,t.y);
+      ctx.fillStyle="#1a1a18";
+      ctx.beginPath();ctx.ellipse(0,6,t.r*0.85,t.r*0.22,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#e8e0d0";
+      ctx.beginPath();
+      ctx.moveTo(0, t.r*0.7);
+      ctx.lineTo(-t.r*0.95, -t.r*0.55);
+      ctx.lineTo(t.r*0.95, -t.r*0.55);
+      ctx.closePath();ctx.fill();
+      ctx.fillStyle="#c03028";
+      ctx.beginPath();
+      ctx.moveTo(0, t.r*0.45);
+      ctx.lineTo(-t.r*0.7, -t.r*0.4);
+      ctx.lineTo(t.r*0.7, -t.r*0.4);
+      ctx.closePath();ctx.fill();
+      ctx.fillStyle="#fff";ctx.font=`bold ${7*scale}px Orbitron`;
+      ctx.textAlign="center";ctx.fillText("CEDA",0,-t.r*0.05);
+      ctx.restore();
+    } else if(t.type==="speedbump"){
+      /* Badén / reductor de velocidad */
+      ctx.fillStyle="#3a3a32";
+      ctx.beginPath();
+      ctx.ellipse(t.x, t.y, t.w/2, t.h*0.9, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle="#c8a040";ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.ellipse(t.x, t.y, t.w/2, t.h*0.9, 0, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.fillStyle="#e8c060";
+      for(let k=-2;k<=2;k++){
+        ctx.fillRect(t.x + k*14*scale - 3, t.y - 2, 6, 4);
+      }
+    } else if(t.type==="sign"){
+      /* Señal triangular de peligro / obra / límite */
+      ctx.save();
+      ctx.translate(t.x,t.y);
+      ctx.fillStyle="#1a1a18";
+      ctx.beginPath();ctx.ellipse(0,5,t.r*0.8,t.r*0.2,0,0,Math.PI*2);ctx.fill();
+      const cols=["#e8c030","#e07020","#c03028"];
+      ctx.fillStyle=cols[t.variant%3];
+      ctx.beginPath();
+      ctx.moveTo(0, -t.r*0.95);
+      ctx.lineTo(-t.r*0.95, t.r*0.55);
+      ctx.lineTo(t.r*0.95, t.r*0.55);
+      ctx.closePath();ctx.fill();
+      ctx.strokeStyle="#1a1a18";ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle="#1a1a18";
+      ctx.font=`bold ${9*scale}px Orbitron`;
+      ctx.textAlign="center";ctx.textBaseline="middle";
+      const labels=["!","OBRA","40"];
+      ctx.fillText(labels[t.variant%3], 0, t.r*0.05);
+      ctx.restore();
     }
   }
 }
@@ -1076,8 +1242,8 @@ function drawTank(){
     const dd=dx*dx+dy*dy;
     if(dd<best){best=dd;ang=Math.atan2(dx,-dy)}
   }
-  /* misma limitación de ángulo que el disparo (~18°) */
-  const maxA=0.35;
+  /* Ángulo visual de la torreta casi recto (~6°) */
+  const maxA=0.12;
   if(ang>maxA) ang=maxA; if(ang<-maxA) ang=-maxA;
   ctx.save();ctx.translate(0,-s*0.35);ctx.rotate(ang);
   const tg=ctx.createLinearGradient(0,-s*0.3,0,s*0.3);tg.addColorStop(0,"#c84840");tg.addColorStop(0.5,"#6a2018");tg.addColorStop(1,"#3a1010");
