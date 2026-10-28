@@ -117,7 +117,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:flex-
       <div class="panel-card">
         <div class="kicker">COMANDO TERRESTRE · OPERACIÓN 01</div>
         <h1>IRON FRONT</h1>
-        <p class="lead">Controla el blindado con el dedo o teclado. Esquiva coches en zigzag por una carretera con subidas y bajadas. Enfréntate a oleadas de enemigos y sobrevive.</p>
+        <p class="lead">Controla el blindado. Esquiva o destruye tanques enemigos en una carretera con subidas empinadas. Oleadas aéreas, edificios al fondo y daño alto. Sobrevive.</p>
         <div class="field">
           <label>SELECCIONA TU VEHÍCULO</label>
           <div class="tank-grid" id="tankGrid">
@@ -173,7 +173,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:flex-
         <b>Clic / ESPACIO</b>: disparo manual. En pausa puedes activar <b>disparo automático</b>.<br>
         <b>G</b>: poder especial. <b>P</b> o <b>ESC</b>: pausa y configuración (audio, modo de disparo, etc.).</p>
         <h3>OBSTÁCULOS Y PODERES</h3>
-        <p>En la carretera aparecen <b>coches, SUVs y camiones</b> que debes esquivar en zigzag (+3 / +5 pts). También hay minas, púas, barriles, fuego, aceite, barreras y badénes. La carretera tiene <b>subidas, bajadas y tramos de tierra</b>. Suministros: munición, reparación y poderes (ráfaga, doble cañón, congelación, imán, impulso…).</p>
+        <p>En la carretera aparecen <b>tanques enemigos</b> que <b>disparan</b> y hacen mucho daño al chocar. Esquivalos en zigzag (+4 / +6 pts) o destrúyelos a tiros. También hay minas, púas, barriles, fuego y barreras. La carretera tiene <b>subidas empinadas y bajadas</b>. El daño es alto: cuida la integridad.</p>
         <p>Los enemigos llegan por <b>oleadas</b>: limpia cada grupo antes de que aparezca el siguiente. Cada 5 oleadas aparece un jefe.</p>
         <h3>INTEGRIDAD Y VIDAS</h3>
         <p>El tanque no muere de un solo impacto. Cada bala o choque resta <b>integridad</b>. Al llegar a cero pierdes una <b>vida</b> y recuperas parte del blindaje. Sin vidas, la misión termina.</p>
@@ -375,12 +375,12 @@ function stopAmbient(){
   if(ambientNode){ try{ambientNode.o.stop()}catch(e){} ambientNode=null; }
 }
 const TANKS={
-  m1:{speed:1.0,fire:1.0,armor:1.0,name:"M1 ABRAMS"},
-  scout:{speed:1.35,fire:0.85,armor:0.7,name:"SCOUT 4×4"},
-  heavy:{speed:0.72,fire:0.9,armor:1.55,name:"IRONCLAD"},
-  desert:{speed:1.1,fire:1.15,armor:0.9,name:"DESERT FOX"},
-  ghost:{speed:1.2,fire:0.95,armor:0.85,name:"GHOST"},
-  thunder:{speed:0.9,fire:1.4,armor:0.95,name:"THUNDER"}
+  m1:{speed:1.0,fire:1.0,armor:0.85,name:"M1 ABRAMS"},
+  scout:{speed:1.35,fire:0.85,armor:0.6,name:"SCOUT 4×4"},
+  heavy:{speed:0.72,fire:0.9,armor:1.25,name:"IRONCLAD"},
+  desert:{speed:1.1,fire:1.15,armor:0.75,name:"DESERT FOX"},
+  ghost:{speed:1.2,fire:0.95,armor:0.7,name:"GHOST"},
+  thunder:{speed:0.9,fire:1.4,armor:0.8,name:"THUNDER"}
 };
 const WORLDS={
   1:{name:"LLANURAS",sky:["#4a6840","#a8c080"],ground:"#3a5028",road:"#2a3028"},
@@ -393,10 +393,10 @@ const WORLDS={
   8:{name:"DEVASTADA",sky:["#303038","#585860"],ground:"#282830",road:"#18181c"}
 };
 const DIFF={
-  easy:   {spawn:0.95, enemySpd:1.00, eDmg:18, lives:5, ammo:130, maxHp:130},
-  normal: {spawn:0.72, enemySpd:1.20, eDmg:26, lives:3, ammo:105, maxHp:105},
-  hard:   {spawn:0.55, enemySpd:1.40, eDmg:36, lives:2, ammo:85,  maxHp:90},
-  extreme:{spawn:0.42, enemySpd:1.60, eDmg:48, lives:1, ammo:70,  maxHp:75}
+  easy:   {spawn:0.95, enemySpd:1.00, eDmg:28, lives:4, ammo:130, maxHp:110},
+  normal: {spawn:0.72, enemySpd:1.20, eDmg:40, lives:3, ammo:100, maxHp:90},
+  hard:   {spawn:0.55, enemySpd:1.40, eDmg:55, lives:2, ammo:80,  maxHp:75},
+  extreme:{spawn:0.42, enemySpd:1.60, eDmg:72, lives:1, ammo:65,  maxHp:60}
 };
 const DIFF_DESC={
   easy:"Más vidas, menos daño enemigo y oleadas más lentas.",
@@ -802,20 +802,24 @@ function update(){
   updateHUD();
 }
 function spawnTrap(){
-  /* Coches en la carretera para esquivar en zigzag + algunas trampas */
-  const types=["car","car","car","car","mine","barrel","oil","spike","fire","barrier","speedbump"];
-  if(wave>=3) types.push("car","car");
-  if(wave>=5) types.push("mine","barrel");
-  if(wave>=7) types.push("cluster");
+  /* Tanques enemigos en la carretera (disparan) + trampas */
+  const types=["rtank","rtank","rtank","rtank","mine","barrel","oil","spike","fire","barrier"];
+  if(wave>=3) types.push("rtank","rtank");
+  if(wave>=5) types.push("mine","barrel","rtank");
+  if(wave>=7) types.push("cluster","rtank");
   const type=types[Math.floor(Math.random()*types.length)];
   const x=40+Math.random()*(W-80);
   const y=H*(0.76+Math.random()*0.10);
-  if(type==="car"){
-    const variants=["sedan","suv","truck","jeep"];
+  if(type==="rtank"){
+    const variants=["light","medium","heavy"];
     const v=variants[Math.floor(Math.random()*variants.length)];
-    const w=(v==="truck"?42:v==="suv"?34:28)*scale;
-    const h=(v==="truck"?18:v==="suv"?16:13)*scale;
-    traps.push({type:"car",x,y,w,h,life:520,hit:false,scored:false,variant:v,vx:(Math.random()-.5)*0.6*scale});
+    const w=(v==="heavy"?56:v==="medium"?46:38)*scale;
+    const h=(v==="heavy"?28:v==="medium"?22:18)*scale;
+    traps.push({
+      type:"rtank",x,y,w,h,life:600,hit:false,scored:false,variant:v,
+      vx:(Math.random()-.5)*0.5*scale, hp:v==="heavy"?4:v==="medium"?3:2,
+      shootT:40+Math.random()*50
+    });
   }
   else if(type==="mine") traps.push({type,x,y,r:14*scale,life:520,armed:true,warn:40});
   else if(type==="spike") traps.push({type,x,y,w:50*scale,h:18*scale,life:420});
@@ -824,7 +828,6 @@ function spawnTrap(){
   else if(type==="oil") traps.push({type,x,y,w:80*scale,h:36*scale,life:360});
   else if(type==="cluster") traps.push({type,x,y:H*0.35,r:12*scale,life:220,armed:true});
   else if(type==="barrier") traps.push({type,x,y,w:70*scale,h:14*scale,life:400,hp:3});
-  else if(type==="speedbump") traps.push({type,x,y,w:90*scale,h:12*scale,life:340});
 }
 function updateTraps(){
   for(let i=traps.length-1;i>=0;i--){
@@ -880,28 +883,55 @@ function updateTraps(){
         }
         if(Math.hypot(player.x-t.x,player.y-t.y)<55*scale){applyDamage(DIFF[difficulty].eDmg*1.3);if(!running)return}
       }
-    } else if(t.type==="car"){
-      /* Coches en la carretera: chocar = daño; esquivar en zigzag = puntos */
+    } else if(t.type==="rtank"){
+      /* Tanques enemigos en la carretera: disparan y hacen mucho daño al chocar */
       t.x += t.vx || 0;
-      if(t.x < 30){ t.x=30; t.vx=Math.abs(t.vx||0.4*scale); }
-      if(t.x > W-30){ t.x=W-30; t.vx=-Math.abs(t.vx||0.4*scale); }
-      const hitW = t.w*0.55 + player.size*0.7;
-      const hitH = t.h*0.7 + player.size*0.5;
+      if(t.x < 40){ t.x=40; t.vx=Math.abs(t.vx||0.35*scale); }
+      if(t.x > W-40){ t.x=W-40; t.vx=-Math.abs(t.vx||0.35*scale); }
+      /* Disparan al jugador */
+      t.shootT = (t.shootT||40) - 1;
+      if(t.shootT<=0 && !t.hit){
+        t.shootT = t.variant==="heavy"?55:t.variant==="medium"?70:85;
+        const dx=player.x-t.x, dy=player.y-t.y;
+        const len=Math.hypot(dx,dy)||1;
+        const sp=(t.variant==="heavy"?3.2:2.6)*scale;
+        eBullets.push({
+          x:t.x, y:t.y-t.h*0.3,
+          vx:(dx/len)*sp, vy:(dy/len)*sp,
+          size:4.2*scale, life:220, fromRoad:true
+        });
+      }
+      /* Se pueden destruir a tiros */
+      for(let j=bullets.length-1;j>=0;j--){
+        const b=bullets[j];
+        if(Math.abs(b.x-t.x)<t.w*0.55 && Math.abs(b.y-t.y)<t.h*0.55){
+          t.hp--; bullets.splice(j,1);
+          spawnParticle(b.x,b.y,"255,180,60",6);
+          if(t.hp<=0){
+            t.life=0;
+            const pts=t.variant==="heavy"?12:t.variant==="medium"?8:5;
+            score+=pts; setMsg("TANQUE ABATIDO +"+pts,50);
+            burstParticles(t.x,t.y,18,"255,140,40"); sfx("explode"); updateHUD();
+          }
+        }
+      }
+      const hitW = t.w*0.55 + player.size*0.75;
+      const hitH = t.h*0.7 + player.size*0.55;
       const dx = player.x - t.x, dy = player.y - t.y;
       if(!t.hit && Math.abs(dx)<hitW && Math.abs(dy)<hitH){
         t.hit=true;
-        applyDamage(DIFF[difficulty].eDmg*(t.variant==="truck"?0.9:0.65));
-        burstParticles(t.x,t.y,10,"200,80,40");
-        screenShake=Math.max(screenShake,10);
-        sfx("hit");
-        player.x += dx>0 ? 12 : -12;
+        /* Daño alto al chocar con tanque enemigo */
+        applyDamage(DIFF[difficulty].eDmg*(t.variant==="heavy"?1.8:t.variant==="medium"?1.4:1.15));
+        burstParticles(t.x,t.y,14,"220,60,30");
+        screenShake=Math.max(screenShake,14);
+        sfx("explode");
+        player.x += dx>0 ? 16 : -16;
         mouse.x = player.x;
         if(!running) return;
-      } else if(!t.scored && !t.hit && Math.abs(dx)<hitW+22*scale && Math.abs(dy)<hitH+16*scale){
-        /* pasó al lado en zigzag */
+      } else if(!t.scored && !t.hit && Math.abs(dx)<hitW+26*scale && Math.abs(dy)<hitH+18*scale){
         t.scored=true;
-        score += t.variant==="truck"?5:3;
-        setMsg(t.variant==="truck"?"+5 ZIGZAG":"+3 ZIGZAG",40);
+        score += t.variant==="heavy"?6:4;
+        setMsg(t.variant==="heavy"?"+6 ZIGZAG":"+4 ZIGZAG",40);
         sfx("pickup");
         updateHUD();
       }
@@ -963,48 +993,55 @@ function drawTraps(){
     } else if(t.type==="cluster"){
       ctx.fillStyle="#e07030";ctx.beginPath();ctx.arc(t.x,t.y,t.r,0,Math.PI*2);ctx.fill();
       ctx.strokeStyle="#ff2200";ctx.stroke();
-    } else if(t.type==="car"){
-      /* Coches / SUVs / camiones en la carretera */
+    } else if(t.type==="rtank"){
+      /* Tanques enemigos grandes en la carretera */
       const alpha=t.hit?0.4:1;
       ctx.globalAlpha=alpha;
-      const cols={sedan:["#3a6a9a","#2a4a70"],suv:["#5a6a40","#3a4a28"],truck:["#8a6a30","#5a4020"],jeep:["#6a5040","#4a3828"]};
-      const c=cols[t.variant]||cols.sedan;
+      const cols={light:["#5a6a48","#3a4a30"],medium:["#4a5840","#2a3828"],heavy:["#3a4038","#1a2018"]};
+      const c=cols[t.variant]||cols.medium;
       const hw=t.w/2, hh=t.h/2;
       /* sombra */
-      ctx.fillStyle="rgba(0,0,0,.35)";
-      ctx.beginPath();ctx.ellipse(t.x,t.y+hh*0.6,hw*1.05,hh*0.35,0,0,Math.PI*2);ctx.fill();
-      /* carrocería */
+      ctx.fillStyle="rgba(0,0,0,.4)";
+      ctx.beginPath();ctx.ellipse(t.x,t.y+hh*0.7,hw*1.1,hh*0.4,0,0,Math.PI*2);ctx.fill();
+      /* orugas */
+      ctx.fillStyle="#1a1a18";
+      ctx.fillRect(t.x-hw*0.95, t.y+hh*0.15, hw*0.28, hh*0.7);
+      ctx.fillRect(t.x+hw*0.67, t.y+hh*0.15, hw*0.28, hh*0.7);
+      /* casco */
       ctx.fillStyle=c[0];
       ctx.beginPath();
-      ctx.moveTo(t.x-hw, t.y+hh*0.3);
-      ctx.lineTo(t.x-hw*0.95, t.y-hh*0.15);
-      ctx.lineTo(t.x-hw*0.55, t.y-hh*0.85);
-      ctx.lineTo(t.x+hw*0.55, t.y-hh*0.85);
-      ctx.lineTo(t.x+hw*0.95, t.y-hh*0.15);
-      ctx.lineTo(t.x+hw, t.y+hh*0.3);
+      ctx.moveTo(t.x-hw*0.85, t.y+hh*0.35);
+      ctx.lineTo(t.x-hw*0.75, t.y-hh*0.25);
+      ctx.lineTo(t.x+hw*0.75, t.y-hh*0.25);
+      ctx.lineTo(t.x+hw*0.85, t.y+hh*0.35);
       ctx.closePath();ctx.fill();
       ctx.strokeStyle=c[1];ctx.lineWidth=1.5;ctx.stroke();
-      /* techo / cabina */
+      /* torreta */
       ctx.fillStyle=c[1];
-      ctx.fillRect(t.x-hw*0.45, t.y-hh*0.75, hw*0.9, hh*0.55);
-      /* ventanas */
-      ctx.fillStyle="rgba(140,190,220,.55)";
-      ctx.fillRect(t.x-hw*0.38, t.y-hh*0.68, hw*0.32, hh*0.35);
-      ctx.fillRect(t.x+hw*0.06, t.y-hh*0.68, hw*0.32, hh*0.35);
-      /* ruedas */
-      ctx.fillStyle="#1a1a18";
-      ctx.beginPath();ctx.arc(t.x-hw*0.55, t.y+hh*0.35, hh*0.38,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.arc(t.x+hw*0.55, t.y+hh*0.35, hh*0.38,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#555";
-      ctx.beginPath();ctx.arc(t.x-hw*0.55, t.y+hh*0.35, hh*0.18,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.arc(t.x+hw*0.55, t.y+hh*0.35, hh*0.18,0,Math.PI*2);ctx.fill();
-      /* faros */
-      ctx.fillStyle="#e8e0a0";
-      ctx.fillRect(t.x-hw*0.9, t.y-hh*0.05, hw*0.18, hh*0.22);
-      ctx.fillRect(t.x+hw*0.72, t.y-hh*0.05, hw*0.18, hh*0.22);
+      ctx.beginPath();
+      ctx.ellipse(t.x, t.y-hh*0.15, hw*0.42, hh*0.45, 0, 0, Math.PI*2);
+      ctx.fill();ctx.stroke();
+      /* cañón apuntando al jugador */
+      const ang = Math.atan2(player.x-t.x, -(player.y-t.y));
+      ctx.save();
+      ctx.translate(t.x, t.y-hh*0.2);
+      ctx.rotate(ang);
+      ctx.fillStyle="#2a2a22";
+      ctx.fillRect(-2, -hh*1.15, 4, hh*1.0);
+      ctx.fillStyle="#c0b8a0";
+      ctx.fillRect(-1.2, -hh*1.12, 2.4, hh*0.9);
+      ctx.restore();
+      /* barra de vida del tanque enemigo */
+      if(t.hp < (t.variant==="heavy"?4:t.variant==="medium"?3:2)){
+        const bw=t.w*0.7;
+        ctx.fillStyle="rgba(0,0,0,.5)";ctx.fillRect(t.x-bw/2,t.y-hh-10,bw,4);
+        ctx.fillStyle="#e05040";
+        const maxH=t.variant==="heavy"?4:t.variant==="medium"?3:2;
+        ctx.fillRect(t.x-bw/2,t.y-hh-10,bw*(t.hp/maxH),4);
+      }
       if(t.scored){
         ctx.fillStyle="#80d060";ctx.font=`bold ${9*scale}px Orbitron`;
-        ctx.textAlign="center";ctx.fillText(t.variant==="truck"?"+5":"+3",t.x,t.y-hh-8);
+        ctx.textAlign="center";ctx.fillText(t.variant==="heavy"?"+6":"+4",t.x,t.y-hh-14);
       }
       ctx.globalAlpha=1;
     } else if(t.type==="barrier"){
@@ -1109,12 +1146,12 @@ function draw(){
   /* Scroll: la vía se desplaza como si el tanque avanzara */
   const scroll = (performance.now()/12) % 100000;
   function roadY(x){
-    /* Perfil fijo en el mundo; al sumar scroll parece que avanzamos */
+    /* Subidas y bajadas más empinadas; al sumar scroll parece que avanzamos */
     const wx = x + scroll;
     return roadBase
-      + Math.sin(wx*0.006+wId*1.7)*16*scale
-      + Math.sin(wx*0.014+wId*0.9)*9*scale
-      + Math.sin(wx*0.028+wId)*4*scale;
+      + Math.sin(wx*0.007+wId*1.7)*32*scale
+      + Math.sin(wx*0.016+wId*0.9)*18*scale
+      + Math.sin(wx*0.032+wId)*8*scale;
   }
   /* Suelo / hierba de fondo (también avanza un poco) */
   ctx.fillStyle=world.ground;
@@ -1126,6 +1163,27 @@ function draw(){
     ctx.lineTo(x,hy);
   }
   ctx.lineTo(W,H);ctx.closePath();ctx.fill();
+  /* Edificios al fondo (se desplazan con el viaje) */
+  const bCols=["#3a4048","#4a4540","#354040","#454038","#2a3538"];
+  for(let i=0;i<9;i++){
+    const bw=40+((i*17)%30);
+    const bh=50+((i*23)%70);
+    const bx=((i*110) - scroll*0.25 % (W+120) + (W+120)) % (W+120) - 40;
+    const by=H*0.58 - bh*0.15;
+    ctx.fillStyle=bCols[i%bCols.length];
+    ctx.fillRect(bx, by-bh*0.85, bw, bh);
+    /* ventanas */
+    ctx.fillStyle="rgba(200,180,80,.25)";
+    for(let wy=0;wy<4;wy++){
+      for(let wx=0;wx<3;wx++){
+        if((i+wx+wy)%5===0) continue;
+        ctx.fillRect(bx+6+wx*(bw/3.5), by-bh*0.8+8+wy*12, 5, 6);
+      }
+    }
+    /* techo */
+    ctx.fillStyle="rgba(0,0,0,.25)";
+    ctx.fillRect(bx-2, by-bh*0.85-4, bw+4, 5);
+  }
   /* Carretera con bordes que siguen el perfil */
   ctx.beginPath();
   const roadHalf=H*0.11;
