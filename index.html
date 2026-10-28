@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="screen-orientation" content="landscape">
 <title>IRON FRONT — Comando Terrestre</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
@@ -14,7 +15,15 @@
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:'Share Tech Mono',monospace;-webkit-tap-highlight-color:transparent}
 body{display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
-#app{width:100%;max-width:1100px;height:100%;display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+/* Preferir horizontal */
+@media (orientation: portrait){
+  body::before{
+    content:"Gira el dispositivo a HORIZONTAL ▶";
+    position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+    background:#0b100c;color:#d4e89a;font:700 16px Orbitron,sans-serif;letter-spacing:2px;text-align:center;padding:24px;
+  }
+}
+#app{width:100%;max-width:1400px;height:100%;display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 #gameWrap{position:relative;flex:1;min-height:0;border:2px solid var(--border);border-radius:8px;overflow:hidden;background:#0e160e;box-shadow:0 0 0 4px #0a100a,0 20px 60px #000a}
 #gameCanvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
 #hudTop{position:absolute;top:0;left:0;right:0;padding:8px 12px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:5;background:linear-gradient(180deg,rgba(8,14,8,.92),transparent)}
@@ -556,6 +565,12 @@ function startGame(){
   lastShot=0;lastSpawn=0;lastSupply=performance.now();lastTrap=performance.now();
   running=true;paused=false;hidePanels();updateHUD();setPauseBtn(true);
   ensureAudio(); startAmbient(); sfx("power");
+  /* Intentar orientación horizontal */
+  try{
+    if(screen.orientation && screen.orientation.lock){
+      screen.orientation.lock("landscape").catch(()=>{});
+    }
+  }catch(e){}
   setMsg("DESPLIEGUE · "+TANKS[selectedTank].name,90);loop();
 }
 function endGame(){
@@ -685,11 +700,11 @@ function update(){
   const smooth=0.42;
   player.x+=(mx-player.x)*smooth*t.speed*spdBoost;
   player.y+=(my-player.y)*smooth*t.speed*spdBoost;
-  /* Confinado a la CARRETERA variable (sigue el perfil de colinas) */
+  /* Confinado a la CARRETERA recta */
   const roadLeft=W*0.04, roadRight=W*0.96;
   const rBase=H*0.78;
   const rHalf=H*0.11;
-  const roadTop=rBase-rHalf+8, roadBot=rBase+rHalf-6;
+  const roadTop=rBase-rHalf+6, roadBot=rBase+rHalf-6;
   player.x=Math.max(roadLeft+player.size*1.4, Math.min(roadRight-player.size*1.4, player.x));
   player.y=Math.max(roadTop+player.size*0.5, Math.min(roadBot-player.size*0.5, player.y));
   mouse.x=Math.max(roadLeft, Math.min(roadRight, mouse.x));
@@ -1140,39 +1155,24 @@ function draw(){
   ctx.save();ctx.translate(shakeX,shakeY);
   const sky=ctx.createLinearGradient(0,0,0,H*0.72);sky.addColorStop(0,world.sky[0]);sky.addColorStop(1,world.sky[1]);
   ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
-  /* Carretera en movimiento (sensación de viaje), perfil estable sin gelatina */
+  /* Carretera RECTA: solo cambia textura (asfalto / cemento vs tierra) */
   const roadBase=H*0.78;
   const wId=activeWorld();
-  /* Scroll: la vía se desplaza como si el tanque avanzara */
   const scroll = (performance.now()/12) % 100000;
-  function roadY(x){
-    /* Subidas y bajadas más empinadas; al sumar scroll parece que avanzamos */
-    const wx = x + scroll;
-    return roadBase
-      + Math.sin(wx*0.007+wId*1.7)*32*scale
-      + Math.sin(wx*0.016+wId*0.9)*18*scale
-      + Math.sin(wx*0.032+wId)*8*scale;
-  }
-  /* Suelo / hierba de fondo (también avanza un poco) */
+  const roadHalf=H*0.11;
+  const isDirt = [1,3,7,8].includes(wId);
+  /* Suelo de fondo */
   ctx.fillStyle=world.ground;
-  ctx.beginPath();
-  ctx.moveTo(0,H);
-  ctx.lineTo(0,H*0.62);
-  for(let x=0;x<=W;x+=12){
-    const hy=H*(0.50+Math.sin((x+scroll*0.35)*0.012+wId*0.5)*0.05);
-    ctx.lineTo(x,hy);
-  }
-  ctx.lineTo(W,H);ctx.closePath();ctx.fill();
-  /* Edificios al fondo (se desplazan con el viaje) */
+  ctx.fillRect(0,H*0.58,W,H*0.42);
+  /* Edificios al fondo */
   const bCols=["#3a4048","#4a4540","#354040","#454038","#2a3538"];
   for(let i=0;i<9;i++){
     const bw=40+((i*17)%30);
     const bh=50+((i*23)%70);
     const bx=((i*110) - scroll*0.25 % (W+120) + (W+120)) % (W+120) - 40;
-    const by=H*0.58 - bh*0.15;
+    const by=H*0.58;
     ctx.fillStyle=bCols[i%bCols.length];
     ctx.fillRect(bx, by-bh*0.85, bw, bh);
-    /* ventanas */
     ctx.fillStyle="rgba(200,180,80,.25)";
     for(let wy=0;wy<4;wy++){
       for(let wx=0;wx<3;wx++){
@@ -1180,52 +1180,46 @@ function draw(){
         ctx.fillRect(bx+6+wx*(bw/3.5), by-bh*0.8+8+wy*12, 5, 6);
       }
     }
-    /* techo */
     ctx.fillStyle="rgba(0,0,0,.25)";
     ctx.fillRect(bx-2, by-bh*0.85-4, bw+4, 5);
   }
-  /* Carretera con bordes que siguen el perfil */
-  ctx.beginPath();
-  const roadHalf=H*0.11;
-  ctx.moveTo(0, roadY(0)-roadHalf);
-  for(let x=0;x<=W;x+=8) ctx.lineTo(x, roadY(x)-roadHalf);
-  for(let x=W;x>=0;x-=8) ctx.lineTo(x, roadY(x)+roadHalf);
-  ctx.closePath();
-  const isDirt = [1,3,7,8].includes(wId);
+  /* Carretera recta */
   if(isDirt){
     const dg=ctx.createLinearGradient(0,roadBase-roadHalf,0,roadBase+roadHalf);
     dg.addColorStop(0,"#5a4830");dg.addColorStop(0.4,"#4a3a28");dg.addColorStop(1,"#3a2e20");
     ctx.fillStyle=dg;
   } else {
+    /* Cemento / asfalto */
     ctx.fillStyle=world.road;
   }
-  ctx.fill();
-  /* Textura de tierra / piedras que se desplazan con el viaje */
+  ctx.fillRect(0, roadBase-roadHalf, W, roadHalf*2);
+  /* Textura tierra o juntas de cemento */
   if(isDirt){
     ctx.fillStyle="rgba(90,70,40,.35)";
     for(let i=0;i<22;i++){
       const px = ((i*97) - (scroll*0.9) % (W+80) + (W+80)) % (W+80) - 40;
-      const py=roadY(px)+(Math.sin(i*3)-0.2)*roadHalf*0.6;
+      const py=roadBase+(Math.sin(i*3)-0.2)*roadHalf*0.5;
       ctx.beginPath();ctx.ellipse(px,py,6+i%5,3+(i%3),0,0,Math.PI*2);ctx.fill();
     }
+  } else {
+    /* Juntas de cemento */
+    ctx.strokeStyle="rgba(255,255,255,.08)";
+    ctx.lineWidth=1;
+    for(let x= -((scroll*0.5)%48); x<W; x+=48){
+      ctx.beginPath();ctx.moveTo(x, roadBase-roadHalf+2);ctx.lineTo(x, roadBase+roadHalf-2);ctx.stroke();
+    }
   }
-  /* Bordes de la carretera */
-  ctx.strokeStyle=isDirt?"rgba(120,90,50,.55)":"rgba(255,255,255,.12)";
+  /* Bordes */
+  ctx.strokeStyle=isDirt?"rgba(120,90,50,.55)":"rgba(255,255,255,.15)";
   ctx.lineWidth=2;
-  ctx.beginPath();
-  for(let x=0;x<=W;x+=10){ const y=roadY(x)-roadHalf; if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y); }
-  ctx.stroke();
-  ctx.beginPath();
-  for(let x=0;x<=W;x+=10){ const y=roadY(x)+roadHalf; if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y); }
-  ctx.stroke();
-  /* Línea central discontinua que corre hacia atrás (sensación de avance) */
-  ctx.strokeStyle="rgba(230,210,120,.4)";
+  ctx.beginPath();ctx.moveTo(0,roadBase-roadHalf);ctx.lineTo(W,roadBase-roadHalf);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,roadBase+roadHalf);ctx.lineTo(W,roadBase+roadHalf);ctx.stroke();
+  /* Línea central discontinua (avance) */
+  ctx.strokeStyle=isDirt?"rgba(230,210,120,.35)":"rgba(230,210,120,.45)";
   ctx.lineWidth=2.5;
   ctx.setLineDash([16,14]);
   ctx.lineDashOffset = -scroll * 0.85;
-  ctx.beginPath();
-  for(let x=0;x<=W;x+=8){ const y=roadY(x); if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y); }
-  ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,roadBase);ctx.lineTo(W,roadBase);ctx.stroke();
   ctx.setLineDash([]);
   ctx.lineDashOffset = 0;
   /* Nombre del sector */
@@ -1266,6 +1260,41 @@ function draw(){
   ctx.fillStyle="rgba(0,0,0,.55)";ctx.fillRect(player.x-barW/2,player.y+player.size*1.35,barW,5);
   ctx.fillStyle=pct>0.55?"#6a9a40":pct>0.3?"#c8a030":"#c03028";ctx.fillRect(player.x-barW/2,player.y+player.size*1.35,barW*pct,5);
   ctx.strokeStyle="rgba(255,255,255,.25)";ctx.lineWidth=1;ctx.strokeRect(player.x-barW/2,player.y+player.size*1.35,barW,5);
+  /* MINIMAPA arriba al centro */
+  {
+    const mw=Math.min(160,W*0.22), mh=52;
+    const mx=W/2-mw/2, my=10;
+    ctx.fillStyle="rgba(8,14,8,.82)";
+    ctx.strokeStyle="#4a6238";ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.roundRect?ctx.roundRect(mx,my,mw,mh,4):(ctx.rect(mx,my,mw,mh));
+    ctx.fill();ctx.stroke();
+    /* zona carretera en minimapa */
+    const roadMy=my+mh*0.72;
+    ctx.fillStyle=isDirt?"#4a3a28":"#2a3028";
+    ctx.fillRect(mx+2, roadMy-6, mw-4, 12);
+    ctx.strokeStyle="rgba(200,180,100,.3)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(mx+2,roadMy);ctx.lineTo(mx+mw-2,roadMy);ctx.stroke();
+    /* enemigos aéreos */
+    enemies.forEach(e=>{
+      const px=mx+4+(e.x/W)*(mw-8);
+      const py=my+6+(e.y/H)*(mh*0.55);
+      ctx.fillStyle=e.boss?"#f0d070":"#c04038";
+      ctx.beginPath();ctx.arc(px,py,e.boss?3:2,0,Math.PI*2);ctx.fill();
+    });
+    /* tanques de carretera */
+    traps.forEach(t=>{
+      if(t.type!=="rtank") return;
+      const px=mx+4+(t.x/W)*(mw-8);
+      ctx.fillStyle="#e07030";
+      ctx.fillRect(px-3, roadMy-3, 6, 5);
+    });
+    /* jugador */
+    const ppx=mx+4+(player.x/W)*(mw-8);
+    ctx.fillStyle="#80d060";
+    ctx.beginPath();ctx.arc(ppx, roadMy, 3.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#d0e0a8";ctx.font=`bold ${8}px Orbitron`;
+    ctx.textAlign="center";ctx.fillText("MAPA", mx+mw/2, my+mh-4);
+  }
   if(msgT>0){const a=Math.min(1,msgT/30);ctx.fillStyle=`rgba(0,0,0,${0.45*a})`;ctx.fillRect(W/2-130,H*0.38,260,36);ctx.fillStyle=`rgba(210,230,160,${a})`;ctx.font=`bold ${13*scale}px Orbitron`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(msg,W/2,H*0.38+18)}
   ctx.restore();
 }
