@@ -1103,37 +1103,37 @@ function draw(){
   ctx.save();ctx.translate(shakeX,shakeY);
   const sky=ctx.createLinearGradient(0,0,0,H*0.72);sky.addColorStop(0,world.sky[0]);sky.addColorStop(1,world.sky[1]);
   ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
-  /* Terreno con colinas y carretera de tierra variable (subidas / bajadas) */
-  const tt=performance.now()/18;
+  /* Carretera en movimiento (sensación de viaje), perfil estable sin gelatina */
   const roadBase=H*0.78;
-  function roadY(x){
-    /* Perfil de carretera: colinas suaves + tramos irregulares de tierra */
-    const wId=activeWorld();
-    return roadBase
-      + Math.sin((x+tt)*0.008+wId)*18*scale
-      + Math.sin((x+tt*0.7)*0.015+wId*2)*10*scale
-      + Math.sin((x*0.03+tt*0.4))*5*scale;
-  }
-  /* Suelo / hierba o tierra de fondo */
   const wId=activeWorld();
+  /* Scroll: la vía se desplaza como si el tanque avanzara */
+  const scroll = (performance.now()/12) % 100000;
+  function roadY(x){
+    /* Perfil fijo en el mundo; al sumar scroll parece que avanzamos */
+    const wx = x + scroll;
+    return roadBase
+      + Math.sin(wx*0.006+wId*1.7)*16*scale
+      + Math.sin(wx*0.014+wId*0.9)*9*scale
+      + Math.sin(wx*0.028+wId)*4*scale;
+  }
+  /* Suelo / hierba de fondo (también avanza un poco) */
   ctx.fillStyle=world.ground;
   ctx.beginPath();
   ctx.moveTo(0,H);
   ctx.lineTo(0,H*0.62);
   for(let x=0;x<=W;x+=12){
-    const hy=H*(0.50+Math.sin(x*0.012+wId*0.5+tt*0.002)*0.06);
+    const hy=H*(0.50+Math.sin((x+scroll*0.35)*0.012+wId*0.5)*0.05);
     ctx.lineTo(x,hy);
   }
   ctx.lineTo(W,H);ctx.closePath();ctx.fill();
-  /* Carretera de tierra con bordes irregulares */
+  /* Carretera con bordes que siguen el perfil */
   ctx.beginPath();
   const roadHalf=H*0.11;
   ctx.moveTo(0, roadY(0)-roadHalf);
   for(let x=0;x<=W;x+=8) ctx.lineTo(x, roadY(x)-roadHalf);
   for(let x=W;x>=0;x-=8) ctx.lineTo(x, roadY(x)+roadHalf);
   ctx.closePath();
-  /* Relleno tierra / asfalto según mundo */
-  const isDirt = [1,3,7,8].includes(activeWorld());
+  const isDirt = [1,3,7,8].includes(wId);
   if(isDirt){
     const dg=ctx.createLinearGradient(0,roadBase-roadHalf,0,roadBase+roadHalf);
     dg.addColorStop(0,"#5a4830");dg.addColorStop(0.4,"#4a3a28");dg.addColorStop(1,"#3a2e20");
@@ -1142,11 +1142,12 @@ function draw(){
     ctx.fillStyle=world.road;
   }
   ctx.fill();
-  /* Textura de tierra / piedras */
+  /* Textura de tierra / piedras que se desplazan con el viaje */
   if(isDirt){
     ctx.fillStyle="rgba(90,70,40,.35)";
-    for(let i=0;i<18;i++){
-      const px=(i*97+tt*0.3)%W, py=roadY(px)+(Math.sin(i*3)-0.2)*roadHalf*0.6;
+    for(let i=0;i<22;i++){
+      const px = ((i*97) - (scroll*0.9) % (W+80) + (W+80)) % (W+80) - 40;
+      const py=roadY(px)+(Math.sin(i*3)-0.2)*roadHalf*0.6;
       ctx.beginPath();ctx.ellipse(px,py,6+i%5,3+(i%3),0,0,Math.PI*2);ctx.fill();
     }
   }
@@ -1159,14 +1160,16 @@ function draw(){
   ctx.beginPath();
   for(let x=0;x<=W;x+=10){ const y=roadY(x)+roadHalf; if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y); }
   ctx.stroke();
-  /* Línea central discontinua que sigue el perfil */
-  ctx.strokeStyle="rgba(230,210,120,.35)";
+  /* Línea central discontinua que corre hacia atrás (sensación de avance) */
+  ctx.strokeStyle="rgba(230,210,120,.4)";
   ctx.lineWidth=2.5;
-  ctx.setLineDash([18,14]);
+  ctx.setLineDash([16,14]);
+  ctx.lineDashOffset = -scroll * 0.85;
   ctx.beginPath();
-  for(let x=0;x<=W;x+=8){ const y=roadY(x); if(x===0)ctx.moveTo(x-(tt%32),y);else ctx.lineTo(x-(tt%32),y); }
+  for(let x=0;x<=W;x+=8){ const y=roadY(x); if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y); }
   ctx.stroke();
   ctx.setLineDash([]);
+  ctx.lineDashOffset = 0;
   /* Nombre del sector */
   ctx.fillStyle="rgba(0,0,0,.4)";ctx.fillRect(8,H*0.58,140,18);
   ctx.fillStyle="#d0e0a8";ctx.font=`bold ${11*scale}px Orbitron`;ctx.textAlign="left";ctx.fillText(world.name,14,H*0.595);
